@@ -114,18 +114,38 @@ export function OrdersTable() {
     );
 
     filtered.sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
+      const aValue = a[sortField]; // Get the value
+      const bValue = b[sortField]; // Get the value
 
-      if (typeof aValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
-
-      if (sortDirection === "asc") {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      // Handle different data types for sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        // Both are strings, safe to use toLowerCase
+        const aLower = aValue.toLowerCase();
+        const bLower = bValue.toLowerCase();
+        if (sortDirection === "asc") {
+          return aLower < bLower ? -1 : aLower > bLower ? 1 : 0;
+        } else {
+          return aLower > bLower ? -1 : aLower < bLower ? 1 : 0;
+        }
+      } else if (typeof aValue === "number" && typeof bValue === "number") {
+        // Both are numbers, sort numerically
+        if (sortDirection === "asc") {
+          return aValue - bValue;
+        } else {
+          return bValue - aValue;
+        }
       } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        // Handle cases where types might differ or are not string/number
+        // (e.g., sorting by 'products' array - might not be meaningful,
+        // but prevents errors and provides a fallback sort)
+        // Convert to string for comparison as a last resort
+        const aStr = String(aValue).toLowerCase();
+        const bStr = String(bValue).toLowerCase();
+        if (sortDirection === "asc") {
+          return aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
+        } else {
+          return aStr > bStr ? -1 : aStr < bStr ? 1 : 0;
+        }
       }
     });
 
