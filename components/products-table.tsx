@@ -81,19 +81,38 @@ export function ProductsTable() {
     );
 
     filtered.sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
+      const aValue = a[sortField];
+      const bValue = b[sortField];
 
-      if (typeof aValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
+      // --- Handle sorting by different types ---
+      let comparisonResult = 0;
 
-      if (sortDirection === "asc") {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      if (
+        sortField === "title" ||
+        sortField === "category" ||
+        sortField === "description"
+      ) {
+        // We know these fields are strings
+        const aStr = (aValue as string).toLowerCase();
+        const bStr = (bValue as string).toLowerCase();
+        comparisonResult = aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
+      } else if (sortField === "id" || sortField === "price") {
+        // We know these fields are numbers
+        const aNum = aValue as number;
+        const bNum = bValue as number;
+        comparisonResult = aNum - bNum;
+      } else if (sortField === "rating") {
+        // We know this field is an object { rate: number, count: number }
+        // Let's sort by rating.rate
+        const aRate = (aValue as Product["rating"]).rate;
+        const bRate = (bValue as Product["rating"]).rate;
+        comparisonResult = aRate - bRate;
       }
+      // Note: sortField 'image' is less common to sort by meaningfully,
+      // but if needed, you could add a case for it.
+
+      // Apply sort direction
+      return sortDirection === "asc" ? comparisonResult : -comparisonResult;
     });
 
     setFilteredProducts(filtered);
