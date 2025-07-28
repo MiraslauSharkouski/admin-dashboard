@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react"; // Import React for types
 import {
   Card,
   CardContent,
@@ -25,6 +25,28 @@ import {
   Line,
 } from "recharts";
 import { Users, Package, ShoppingCart, DollarSign } from "lucide-react";
+
+// --- Type Definitions ---
+// Define the structure of your data points
+interface CategoryDataPoint {
+  name: string;
+  value: number; // Assuming count is a number
+}
+
+interface MonthlyDataPoint {
+  month: string;
+  users: number;
+  orders: number;
+  revenue: number;
+}
+
+// Define the structure of your stats
+interface Stats {
+  totalUsers: number;
+  totalProducts: number;
+  totalOrders: number;
+  totalRevenue: number;
+}
 
 const chartConfig = {
   users: {
@@ -53,14 +75,15 @@ const COLORS = [
 ];
 
 export function DashboardCharts() {
-  const [stats, setStats] = useState({
+  // --- Explicitly Typed State ---
+  const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     totalProducts: 0,
     totalOrders: 0,
     totalRevenue: 0,
   });
-  const [categoryData, setCategoryData] = useState([]);
-  const [monthlyData, setMonthlyData] = useState([]);
+  const [categoryData, setCategoryData] = useState<CategoryDataPoint[]>([]); // Array of CategoryDataPoint objects
+  const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]); // Array of MonthlyDataPoint objects
 
   useEffect(() => {
     fetchDashboardData();
@@ -74,7 +97,7 @@ export function DashboardCharts() {
 
       // Fetch products
       const productsRes = await fetch("https://fakestoreapi.com/products");
-      const products = await productsRes.json();
+      const products: { category: string }[] = await productsRes.json(); // Type assertion for product structure used here
 
       // Generate mock orders and revenue data
       const mockOrders = 150;
@@ -88,22 +111,24 @@ export function DashboardCharts() {
       });
 
       // Process category data for pie chart
-      const categoryCount = products.reduce((acc: any, product: any) => {
-        acc[product.category] = (acc[product.category] || 0) + 1;
-        return acc;
-      }, {});
+      const categoryCount: Record<string, number> = {}; // Use Record<string, number> for dynamic keys
+      products.forEach((product) => {
+        categoryCount[product.category] =
+          (categoryCount[product.category] || 0) + 1;
+      });
 
-      const categoryChartData = Object.entries(categoryCount).map(
-        ([name, value]) => ({
-          name,
-          value,
-        })
-      );
+      // Map to the expected structure for Recharts
+      const categoryChartData: CategoryDataPoint[] = Object.entries(
+        categoryCount
+      ).map(([name, value]) => ({
+        name,
+        value,
+      }));
       setCategoryData(categoryChartData);
 
       // Generate monthly data for line chart
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-      const monthlyChartData = months.map((month) => ({
+      const monthlyChartData: MonthlyDataPoint[] = months.map((month) => ({
         month,
         users: Math.floor(Math.random() * 50) + 20,
         orders: Math.floor(Math.random() * 100) + 50,
@@ -193,6 +218,8 @@ export function DashboardCharts() {
                     dataKey="users"
                     stroke="var(--color-users)"
                     strokeWidth={2}
+                    // dot={{ r: 2 }} // Optional: Add dots to line points
+                    // activeDot={{ r: 6 }} // Optional: Style for active dot
                   />
                   <Line
                     type="monotone"
@@ -200,6 +227,13 @@ export function DashboardCharts() {
                     stroke="var(--color-orders)"
                     strokeWidth={2}
                   />
+                  {/* Optional: Add Revenue line if needed in LineChart */}
+                  {/* <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="var(--color-revenue)"
+                    strokeWidth={2}
+                  /> */}
                 </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
