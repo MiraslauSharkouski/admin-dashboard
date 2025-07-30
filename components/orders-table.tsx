@@ -22,6 +22,53 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { exportToCSV, exportToPDF } from "@/lib/export-utils";
 
+interface User {
+  id: number;
+  email: string;
+  username: string;
+  password: string;
+  name: {
+    firstname: string;
+    lastname: string;
+  };
+  address: {
+    city: string;
+    street: string;
+    number: number;
+    zipcode: string;
+    geolocation: {
+      lat: string;
+      long: string;
+    };
+  };
+  phone: string;
+}
+
+interface Product {
+  id: number;
+  title: string;
+  price: number;
+  description: string;
+  category: string;
+  image: string;
+  rating: {
+    rate: number;
+    count: number;
+  };
+}
+
+interface CartItem {
+  productId: number;
+  quantity: number;
+}
+
+interface Cart {
+  id: number;
+  userId: number;
+  date: string; // ISO 8601 date string
+  products: CartItem[];
+}
+
 interface Order {
   id: number;
   userId: number;
@@ -57,20 +104,28 @@ export function OrdersTable() {
     try {
       // Fetch carts as orders from FakeStore API
       const cartsResponse = await fetch("https://fakestoreapi.com/carts");
-      const carts = await cartsResponse.json();
+      const carts: Cart[] = await cartsResponse.json(); // Type the fetched data
 
       // Fetch users to get customer names
       const usersResponse = await fetch("https://fakestoreapi.com/users");
-      const users = await usersResponse.json();
+      const users: User[] = await usersResponse.json(); // Type the fetched data
 
       // Fetch products to calculate totals
       const productsResponse = await fetch("https://fakestoreapi.com/products");
-      const products = await productsResponse.json();
+      const products: Product[] = await productsResponse.json(); // Type the fetched data
 
-      const ordersData = carts.map((cart: any) => {
-        const user = users.find((u: any) => u.id === cart.userId);
-        const total = cart.products.reduce((sum: number, item: any) => {
-          const product = products.find((p: any) => p.id === item.productId);
+      // --- Update the map and reduce callbacks with specific types ---
+      const ordersData: Order[] = carts.map((cart) => {
+        // Remove : any, let TS infer or specify : Cart
+        // Find user: u is now typed as User
+        const user = users.find((u: User) => u.id === cart.userId); // Or just (u) => ...
+
+        // Calculate total: sum is number, item is CartItem
+        const total = cart.products.reduce((sum: number, item: CartItem) => {
+          // Find product: p is now typed as Product
+          const product = products.find(
+            (p: Product) => p.id === item.productId
+          ); // Or just (p) => ...
           return sum + (product ? product.price * item.quantity : 0);
         }, 0);
 
