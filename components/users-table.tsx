@@ -85,27 +85,62 @@ export function UsersTable() {
     );
 
     filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      // --- Initialize aValue and bValue with a type that matches their usage ---
+      let aValue: string | number;
+      let bValue: string | number;
+      // --- End Initialization ---
 
+      // --- Determine the actual values to sort by based on sortField ---
       if (sortField === "name") {
+        // Handle the special "name" case
         aValue = `${a.name.firstname} ${a.name.lastname}`;
         bValue = `${b.name.firstname} ${b.name.lastname}`;
+      } else if (sortField === "id") {
+        // Handle numeric fields
+        aValue = a[sortField]; // This is a number
+        bValue = b[sortField]; // This is a number
       } else {
-        aValue = a[sortField as keyof User];
-        bValue = b[sortField as keyof User];
+        // Handle string fields that are direct properties of User (username, email, phone)
+        // We know these are strings based on the User interface
+        // Type assertion is safe here because we checked the sortField
+        aValue = a[sortField] as string;
+        bValue = b[sortField] as string;
       }
+      // Note: This logic intentionally excludes sorting by complex object fields like 'address' or 'name' object
+      // If you needed to sort by address.city, you'd add another else if branch for 'address.city' (as a string key)
+      // and access a.address.city directly.
 
-      if (typeof aValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
-
-      if (sortDirection === "asc") {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      // --- Perform comparison based on the determined type ---
+      // Check the type of the *values* we just assigned
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        // Both are strings, safe to use toLowerCase
+        const aLower = aValue.toLowerCase();
+        const bLower = bValue.toLowerCase();
+        if (sortDirection === "asc") {
+          return aLower < bLower ? -1 : aLower > bLower ? 1 : 0;
+        } else {
+          return aLower > bLower ? -1 : aLower < bLower ? 1 : 0;
+        }
+      } else if (typeof aValue === "number" && typeof bValue === "number") {
+        // Both are numbers, sort numerically
+        if (sortDirection === "asc") {
+          return aValue - bValue;
+        } else {
+          return bValue - aValue;
+        }
       } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        // This else block should ideally not be reached given the logic above,
+        // but provides a fallback. It correctly handles the case where one or
+        // both values might not be string/number by converting them.
+        const aStr = String(aValue).toLowerCase();
+        const bStr = String(bValue).toLowerCase();
+        if (sortDirection === "asc") {
+          return aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
+        } else {
+          return aStr > bStr ? -1 : aStr < bStr ? 1 : 0;
+        }
       }
+      // --- End Comparison ---
     });
 
     setFilteredUsers(filtered);
