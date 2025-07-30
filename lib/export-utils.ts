@@ -1,24 +1,44 @@
-export function exportToCSV(data: any[], filename: string) {
+// lib/export-utils.ts
+
+export function exportToCSV(data: unknown[], filename: string) {
   if (data.length === 0) return;
 
-  const headers = Object.keys(data[0]);
+  // Type guard or assertion might be needed if you access specific properties
+  // For a generic CSV exporter handling objects, 'unknown' is acceptable for the array itself.
+  // However, accessing properties requires care or type assertions within the function.
+  const firstRow = data[0];
+  if (typeof firstRow !== "object" || firstRow === null) {
+    console.error("CSV export data must be an array of objects.");
+    return;
+  }
+
+  const headers = Object.keys(firstRow as Record<string, unknown>); // Asserting it's an object to get keys
   const csvContent = [
     headers.join(","),
-    ...data.map((row) =>
-      headers
+    ...data.map((row) => {
+      // Ensure row is an object for property access
+      if (typeof row !== "object" || row === null) return ""; // Or handle error
+
+      const objRow = row as Record<string, unknown>; // Assert type for access
+      return headers
         .map((header) => {
-          const value = row[header];
-          // Escape commas and quotes in CSV
+          const value = objRow[header];
+          // Handle value types for CSV escaping
           if (
             typeof value === "string" &&
             (value.includes(",") || value.includes('"'))
           ) {
             return `"${value.replace(/"/g, '""')}"`;
           }
-          return value;
+          // Convert other types (number, boolean) to string safely
+          if (value != null) {
+            // Check for null or undefined
+            return String(value);
+          }
+          return ""; // Or return '""' if you prefer empty fields as quoted empty strings
         })
-        .join(",")
-    ),
+        .join(",");
+    }),
   ].join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -38,11 +58,19 @@ export function exportToCSV(data: any[], filename: string) {
   }
 }
 
-export function exportToPDF(data: any[][], headers: string[], title: string) {
+// For PDF, data is an array of arrays, so unknown[][] is appropriate.
+// You primarily iterate over it, so unknown[][] is safer than any[][].
+export function exportToPDF(
+  data: unknown[][],
+  headers: string[],
+  title: string
+) {
   // Simple PDF generation using HTML and print
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
 
+  // Ensure data elements are treated as arrays of printable values (strings/numbers)
+  // Map handles this iteration safely even with unknown[][]
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -63,14 +91,18 @@ export function exportToPDF(data: any[][], headers: string[], title: string) {
       <table>
         <thead>
           <tr>
-            ${headers.map((header) => `<th>${header}</th>`).join("")}
+            ${headers
+              .map((header) => `<th>${escapeHtml(header)}</th>`)
+              .join("")}
           </tr>
         </thead>
         <tbody>
           ${data
             .map(
               (row) =>
-                `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`
+                `<tr>${row
+                  .map((cell) => `<td>${escapeHtml(String(cell ?? ""))}</td>`)
+                  .join("")}</tr>` // Convert cell to string safely
             )
             .join("")}
         </tbody>
@@ -87,4 +119,14 @@ export function exportToPDF(data: any[][], headers: string[], title: string) {
     printWindow.print();
     printWindow.close();
   }, 250);
+}
+
+// Helper function to escape HTML to prevent injection issues when generating HTML content
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
